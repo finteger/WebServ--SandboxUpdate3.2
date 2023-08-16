@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <meta charset="utf-8">
+   <title>Home Page</title>
+   <link rel="stylesheet" type="text/css" href="/css/form.css" />
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+
+<header>
+    <div class="container" style="height:100px;">
+        <center><img src="/images/rdplogo.png" height="80px" /></center> 
+        <form id="logout" action="/logout" method="POST" class="logout-form">
+            <button type="submit" style="position: relative;">Logout</button>
+        </form>
+    </div>
+
+  <a href="http://localhost:3000/api/docs" style="color:#fff;
+  margin-left:100px; text-decoration:none;">Api Documentation</a>
+</header>
+
+<div class="container">
+   
+    <table id="table">
+        <caption>
+            <p>Student Roster</p>
+            <div id="canvasContainer"><canvas id="attendanceChart"></canvas></div>
+        </caption>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Attendance</th>
+            </tr>
+        </thead>
+        <tbody>
+           <% students.forEach((record) => { %>
+             <tr>
+                <% if(record.attendanceCount < maxAttendanceCount) { %>
+                    <td><%= record.name %> <i class="fa-solid fa-triangle-exclamation" style="color:red; font-size:8px;padding:5px;">&nbsp;Falling Behind</i>
+                <% } else { %>
+                    <td><%= record.name %></td>
+                <% } %>
+                <td><%= record.email %></td>
+                <td><%= record.attendanceCount %></td>
+                </tr>
+               <% }) %> 
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="100%">
+                    <form id="reset" action="/reset" method="post">
+                        <button type="submit" style="border: 1px solid #fff;">Reset Fields</button>
+                    </form>
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+
+ 
+    <div id="attend">
+
+    <form id="attendForm" action="/updatestudent" method="POST">
+        <h3><i class="fa-solid fa-school"></i>&nbsp;&nbsp;Attendance Form</h3>
+
+        <center>
+            <label for="attendanceDate">Date:</label>
+            <input type="date" name="attendanceDate" min="<%= new Date().toISOString().split('T')[0]  %>" style="border-radius:5px; padding: 5;" required>
+        </center>
+
+        <ul style="padding: 0; font-size:12px;">
+            <% students.forEach((record) => { %>
+                <li>
+                    <hr>
+                    <label>
+                        <%= record.name %>
+                        <input type="checkbox" name="attendance[]" value="<%= record._id %>">
+                    </label>
+                </li>
+            <% }); %>
+        </ul>
+        <div style="text-align:right;">
+        <button type="submit" >Submit</button>
+    </div>
+    </form>
+    </div>
+
+    <form id="add-student-form" action="/addstudent" method="POST">
+        <h3>Add a student</h3>
+        <input type="text" id="name" name="name"  placeholder="Name" required>
+        <input type="text" id="email" name="email"  placeholder="Email" required>
+        <br>
+        <button type="submit">Add</button>
+    </form>
+
+    <br>
+
+    <form id="delete-student-form" action="/deletestudent" method="POST">
+        <h3>Delete a student</h3>
+        <input type="text" id="name" name="name" placeholder="Name" required>
+        <br>
+        <button type="submit">Delete</button>
+        <br>
+        <div id="deletenotification" style="margin-top:10px;"><i class="fa-solid fa-check"></i>&nbsp;Student successfully deleted!</div>
+    </form>
+
+    <br>
+
+</div>
+
+</body>
+
+<script>
+const deleteNotification = document.getElementById('deletenotification');
+const addStudent = document.getElementById('delete-student-form');
+const dataTable = document.getElementById('table');
+
+addStudent.addEventListener('submit', () => {
+
+deleteNotification.style.display = "block";
+
+});
+</script>
+
+<script>
+ const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+ checkboxes.forEach((checkbox) => {
+  checkbox.addEventListener('change', () => {
+
+    const hiddenInput = checkbox.parentNode.querySelector('input[type="hidden"]');
+
+    if(checkbox.checked) {
+        hiddenInput.value = checkbox.value;
+    } else {
+        hiddenInput.value;
+    }  
+    
+  });
+ });
+</script>
+
+
+
+<script  src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+
+document.addEventListener('DOMContentLoaded', function(){
+
+    const studentsData = JSON.parse('<%- JSON.stringify(students) %>');
+
+
+    //Calculate the sum of attendance counts
+    const sumAttendanceCount = '<%= maxAttendanceCount %>';
+
+    //Calculate the percentages of attendance
+    const percentages = studentsData.map(student => (student.attendanceCount / sumAttendanceCount) * 100 );
+
+  
+    
+    //Create labels and data arrays
+    const labels = studentsData.map(s => (s.attendanceDate ? `${s.name} - ${new Date(s.attendanceDate).toLocaleDateString()}`: ""));
+
+
+    const data = percentages;
+
+
+
+    // Create the Chart.js bar chart
+
+    new Chart(
+
+      document.getElementById('attendanceChart'),
+
+      {
+
+        type: 'pie', // Change to 'bar' chart type
+
+        data: {
+
+          labels: labels,
+
+          datasets: [
+
+            {
+
+              label: 'Attendance Percentage',
+
+              data: data,
+
+              backgroundColor: [
+                'rgb(255, 99, 132)',
+                'rgb(54, 162, 235)',
+                'rgb(255, 205, 86)'
+              ],
+
+            }
+
+          ]
+
+        },
+
+        options: {
+
+          responsive: true,
+
+          maintainAspectRatio: true,
+
+          scales: {
+
+            y: {
+
+              beginAtZero: true,
+
+              title: {
+
+                display: true,
+
+                text: 'Percentage (%)'
+
+              }
+
+            },
+
+            x: {
+
+              title: {
+
+                display: true,
+
+                text: 'Student & Date'
+
+              },
+
+              ticks: {
+
+          font: {
+
+            size: 8 // Adjust the font size for the tick labels
+
+          }
+
+        }
+
+            }
+
+          }
+
+        }
+
+      }
+
+    );
+
+});
+
+
+
+
+</script>
+
+</html>
